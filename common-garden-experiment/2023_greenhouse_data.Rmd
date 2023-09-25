@@ -1,0 +1,344 @@
+---
+title: "2023 Greenhouse Data"
+author: "Joanna Tang"
+date: "2023-09-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include = FALSE}
+
+# Install packages, read in data
+library(tidyverse)
+library(janitor)
+
+vernal_pool_greenhouse_experiment_2023 <- read_csv("vernal_pool_greenhouse_experiment_2023.csv") %>% select(-"Plant ID...20") %>% clean_names()
+
+```
+# 2023 plant survival of focus species (tracking weekly monitoring of # of plants that survived each week)
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+
+# 2023 plant survival of focus species
+
+## Dataframe of only plant survival of focus species
+plant_survival_23 <- vernal_pool_greenhouse_experiment_2023 %>% 
+  select(date, inundation_treatment, replicate, species, population, density_treatment, phenological_stage, plant_id_25) %>% 
+  mutate(plant_id = paste(inundation_treatment, replicate, species, population, density_treatment, plant_id_25, sep = "_")) %>% 
+  mutate(treatment = paste(inundation_treatment, population, sep = "_")) %>% 
+  mutate(species_full_name = case_when(grepl("JUBU", plant_id_25) ~ "Juncus_bufonius", grepl("FEPE", plant_id_25) ~ "Festuca_perennis", grepl("DEFA", plant_id_25) ~ "Deinandra_fasciculata")) %>% 
+  filter(species_full_name != "NA") %>% 
+  filter(phenological_stage != "other") %>% 
+  filter(inundation_treatment != "Extras")
+
+
+
+### Graph of FEPE weekly abundance, by treatment
+fepe_abundance_23 <- plant_survival_23 %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  group_by(date, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+  geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  labs(title = "Festuca perennis total abundance", x = "date", y = "abundance", caption = "drought & stochastic had higher abundance (expected)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 60), breaks = c(0, 10, 20, 30, 40, 50, 60)) +
+  scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+fepe_abundance_23
+
+### Graph of FEPE weekly germination, by treatment
+fepe_germination_23 <- plant_survival_23 %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  group_by(date, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+  geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  labs(title = "Festuca perennis germination", x = "date", y = "germinants", caption = "drought germinated later (unexpected)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 15), breaks = c(0, 5, 10, 15)) +
+  scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+fepe_germination_23
+
+### Graph of FEPE weekly seed set, by treatment
+fepe_fruiting_23 <- plant_survival_23 %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  group_by(date, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+  geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  labs(title = "Festuca perennis seed set", x = "date", y = "abundance", caption = "drought fruited earlier (expected)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 2), breaks = c(0, 1, 2)) +
+  scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+fepe_fruiting_23
+
+
+### Graph of JUBU weekly abundance, by treatment
+jubu_abundance_23 <- plant_survival_23 %>% 
+  filter(species == "JUBU") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(date, inundation_treatment, population) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+    geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  facet_wrap(~population, strip.position = "bottom", scales = "free_x") +
+  labs(title = "Juncus bufonius total abundance", x = "date", y = "abundance", caption = "IV: drought did worse (expected) \n CP: only a few stochastic \n M: drought did worse (expected) but everything still did worse than IV (unexpected) \n A: drought did worse (expected) but everything comparable to IV (unexpected)") +
+  theme_classic() +
+  theme(axis.text = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 25), breaks = c(0, 5, 10, 15, 20, 25)) +
+  scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+jubu_abundance_23
+
+### Chi-squared of JUBU germination, by population and treatment
+jubu_germination_pop_x2 <- plant_survival_23 %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(inundation_treatment, population) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  pivot_wider(names_from = inundation_treatment, values_from = abundance) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  column_to_rownames(var = "population") %>% 
+  chisq.test(.)
+#p = 0.8947 -- population is not affecting germination
+
+### Graph of JUBU weekly germination, by treatment
+jubu_germination_23 <- plant_survival_23 %>% 
+  filter(species == "JUBU") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  group_by(date, inundation_treatment, population) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+    geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  facet_wrap(~population, strip.position = "bottom", scales = "free_x") +
+  labs(title = "Juncus bufonius germination", x = "date", y = "germinants", caption = "IV: drought did worse (expected), but germinated later (unexpected) \n M: everything pretty low -- worse than IV (unexpected) \n A: drought did worse (expected), but germinated later (unexpected)") +
+  theme_classic() +
+  theme(axis.text = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 25), breaks = c(0, 5, 10, 15, 20, 25)) +
+  scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+jubu_germination_23
+
+### Graph of JUBU weekly seed set, by treatment
+jubu_fruiting_23 <- plant_survival_23 %>% 
+  filter(species == "JUBU") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  group_by(date, inundation_treatment, population) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+    geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  facet_wrap(~population, strip.position = "bottom", scales = "free_x") +
+  labs(title = "Juncus bufonius seed set", x = "date", y = "abundance", caption = "IV: later fruiting in historical (expected) \n M: later fruiting in historical (expected) \n A: later fruiting in historical (expected)") +
+  theme_classic() +
+  theme(axis.text = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 15), breaks = c(0, 5, 10, 15)) +
+  scale_color_manual(values = c("dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("dodgerblue3", "azure4"), name = "Inundation Treatment")
+jubu_fruiting_23
+
+### Chi-squared of JUBU seed set, by population and treatment
+jubu_fruiting_pop_x2 <- plant_survival_23 %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(inundation_treatment, population) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  pivot_wider(names_from = inundation_treatment, values_from = abundance) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>% 
+  column_to_rownames(var = "population") %>% 
+  chisq.test(.)
+#p = 0.4291 -- population is not affecting germination
+
+
+
+### Graph of DEFA weekly abundance, by treatment
+defa_abundance_23 <- plant_survival_23 %>% 
+  filter(species == "DEFA") %>% 
+  filter(species_full_name == "Deinandra_fasciculata") %>% 
+  group_by(date, inundation_treatment, population) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot(aes(group = inundation_treatment)) +
+  geom_col(aes(x = date, y = abundance, fill = inundation_treatment), position = "dodge") +
+    geom_smooth(aes(x = date, y = abundance, color = inundation_treatment), se = FALSE) +
+  facet_wrap(~population, strip.position = "bottom", scales = "free_x") +
+  labs(title = "Deinandra fasciculata total abundance", x = "date", y = "abundance", caption = "very low overall...") +
+  theme_classic() +
+  theme(axis.text = element_text(angle = 90)) +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 3), breaks = c(0, 1, 2, 3)) +
+  scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+defa_abundance_23
+
+
+```
+
+# 2023 germination, abundance of FEPE, JUBU (total # recorded over entire experimental period)
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+# 2023 germination, abundance of FEPE, JUBU
+
+## Germination rates
+germination_23 <- vernal_pool_greenhouse_experiment_2023 %>% 
+  mutate(species_full_name = case_when(grepl("JUBU", plant_id_25) ~ "Juncus_bufonius", grepl("FEPE", plant_id_25) ~ "Festuca_perennis")) %>% 
+  filter(species_full_name != "NA") %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  filter(inundation_treatment != "Extras") %>% 
+  group_by(inundation_treatment, replicate, species_full_name) %>% 
+  summarize(abundance = length(species_full_name)) %>% 
+  mutate(rate = if_else(species_full_name == "Juncus_bufonius", abundance/1200, abundance/1400))
+
+### Boxplot of germination rate
+germination_23_box <- germination_23 %>% 
+  ggplot() +
+  geom_boxplot(aes(x = species_full_name, y = rate, fill = inundation_treatment), alpha = 0.7) +
+    geom_point(aes(x = species_full_name, y = rate, color = inundation_treatment), position = position_jitterdodge(jitter.width=0.2)) +
+labs(title = "Germination rates per bin", x = "species", y = "rate", caption = "FEPE: drought & stochastic higher (expected) \n sig association b/t inundation and germination (X2 = 17.40, p << 0.001) \n JUBU: historical & stochastic higher, \n sig association b/t inundation and germination (X2 = 26.83, p << 0.001)") +
+  theme_classic() +
+    scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+germination_23_box
+
+### Chi-squared of FEPE germination
+fepe_germination_x2 <- plant_survival_23 %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  group_by(inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  spread(inundation_treatment, abundance) %>% 
+  t() %>% 
+  chisq.test(.)
+#p = 0.001662 -- inundation treatment is affecting germination
+
+### Chi-squared of JUBU germination
+jubu_germination_x2 <- plant_survival_23 %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  spread(inundation_treatment, abundance) %>% 
+  t() %>% 
+  chisq.test(.)
+#p << 0.001 -- inundation treatment is affecting germination
+
+
+### Exploratory graphs of germination
+germiation_hist <- plant_survival_23 %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  group_by(replicate, species_full_name) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot() +
+  geom_histogram(aes(x = abundance)) +
+  facet_wrap(~species_full_name)
+#uniformly distributed
+
+### Kruskal-Wallis of FEPE germination
+fepe_germination_kw <- plant_survival_23 %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  group_by(replicate, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  kruskal.test(abundance ~ inundation_treatment, data = .)
+#p = 0.1112 -- FEPE germination not sig diff b/t inundation treatments
+
+### Kruskal-Wallis of JUBU germination
+jubu_germination_kw <- plant_survival_23 %>% 
+  filter(phenological_stage == "Germinated") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(replicate, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  kruskal.test(abundance ~ inundation_treatment, data = .)
+#p = 0.1479 -- JUBU germination not sig diff b/t inundation treatments
+
+
+
+## Seed set rate
+fruiting_23 <- vernal_pool_greenhouse_experiment_2023 %>% 
+  mutate(species_full_name = case_when(grepl("JUBU", plant_id_25) ~ "Juncus_bufonius", grepl("FEPE", plant_id_25) ~ "Festuca_perennis")) %>% 
+  filter(species_full_name != "NA") %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  filter(inundation_treatment != "Extras") %>% 
+  group_by(inundation_treatment, replicate, species_full_name) %>% 
+  summarize(abundance = length(species_full_name)) %>% 
+  mutate(rate = if_else(species_full_name == "Juncus_bufonius", abundance/1200, abundance/1400))
+
+### Boxplot of seed set rate
+fruiting_23_box <- fruiting_23 %>% 
+  ggplot() +
+  geom_boxplot(aes(x = species_full_name, y = rate, fill = inundation_treatment), alpha = 0.7) +
+  geom_point(aes(x = species_full_name, y = rate, color = inundation_treatment), position = position_jitterdodge(jitter.width=0.2)) +
+  labs(title = "Fruiting rates per bin", x = "species", y = "rate", caption = "FEPE: overall much lower than JUBU, highest in historical \n JUBU: historical highest, none from drought (expected), \n JUBU has sig association b/t inundation and seed set (X2 = 12.56 , p << 0.001)") +
+  theme_classic() +
+    scale_color_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment") +
+  scale_fill_manual(values = c("darkgoldenrod", "dodgerblue3", "azure4"), name = "Inundation Treatment")
+fruiting_23_box
+
+### Chi-squared of FEPE seed set
+fepe_fruiting_x2 <- plant_survival_23 %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  group_by(inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  spread(inundation_treatment, abundance) %>% 
+  t() %>% 
+  chisq.test(.)
+#p = 0.4493 -- inundation treatment is not affecting seed set
+
+### Chi-squared of JUBU seed set
+jubu_fruiting_x2 <- plant_survival_23 %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  spread(inundation_treatment, abundance) %>% 
+  t() %>% 
+  chisq.test(.)
+#p << 0.003942 -- inundation treatment is affecting germination
+
+
+### Exploratory graphs of seed set
+fruiting_hist <- plant_survival_23 %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  group_by(replicate, species_full_name) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  ggplot() +
+  geom_histogram(aes(x = abundance)) +
+  facet_wrap(~species_full_name)
+#not normally distributed
+
+### Kruskal-Wallis of FEPE seed set
+fepe_fruiting_kw <- plant_survival_23 %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  filter(species_full_name == "Festuca_perennis") %>% 
+  group_by(replicate, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  kruskal.test(abundance ~ inundation_treatment, data = .)
+#p = 0.7756 -- FEPE germination not sig diff b/t inundation treatments
+
+### Kruskal-Wallis of JUBU seed set
+jubu_fruiting_kw <- plant_survival_23 %>% 
+  filter(phenological_stage == "Fruiting") %>% 
+  filter(species_full_name == "Juncus_bufonius") %>% 
+  group_by(replicate, inundation_treatment) %>% 
+  summarize(abundance = length(plant_id)) %>% 
+  kruskal.test(abundance ~ inundation_treatment, data = .)
+#p = 0.5127 -- JUBU germination not sig diff b/t inundation treatments
+
+```
+
+
